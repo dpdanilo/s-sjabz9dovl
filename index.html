@@ -202,7 +202,7 @@ tr.tot td{font-weight:800;border-top:2px solid var(--linha)}
   // ======================================================================
   // Estado
   // ======================================================================
-  var st = { uf: '', mun: '', local: null, todas: false };
+  var st = { uf: '', mun: '', local: null, todas: false, vis: 'locais', ord: 'apur', lim: 300, todoUf: false };
   var D = null;          // base do estado: {uf, m, l: [[mun, zona, local, nome, endereço, [[seção, aptos, comp, Lula, Flávio, brancos, nulos]]]]}
   var CS = { uf: '', hora: '', chegou: {}, total: 0, n: 0 };   // seções do 2º turno já recebidas pelo TSE: 'mun|zona|seção' → hora
   var RES = {};          // 'mun|zona|seção' → resultado do 2º turno lido do boletim
@@ -213,7 +213,7 @@ tr.tot td{font-weight:800;border-top:2px solid var(--linha)}
   function ch(mun, zona, sec) { return mun + '|' + zona + '|' + sec; }
 
   function abrirUf(uf) {
-    st.uf = uf; st.mun = ''; st.local = null; st.todas = false; D = null; RES = {}; LENDO = {}; ERROS = {}; CS = { uf: '', hora: '', chegou: {}, total: 0, n: 0 };
+    st.uf = uf; st.mun = ''; st.local = null; st.todas = false; st.todoUf = false; st.lim = 300; D = null; RES = {}; LENDO = {}; ERROS = {}; CS = { uf: '', hora: '', chegou: {}, total: 0, n: 0 };
     render();
     if (!uf) return Promise.resolve();
     return carregar(PASTA + uf.toLowerCase() + '.json').then(function (d) {
@@ -241,7 +241,9 @@ tr.tot td{font-weight:800;border-top:2px solid var(--linha)}
   }
   // seções a ler agora: as do local aberto (ou do município todo, se pedido) que já chegaram e ainda não foram lidas
   function seccoesAbertas() {
-    if (!D || !st.mun) return [];
+    if (!D) return [];
+    if (st.todoUf) return secoesDe(D.l.map(function (l, i) { return i; })).map(function (x) { return [x.mun, x.zona, x.s[0]]; });   // estado pequeno, lido inteiro
+    if (!st.mun) return [];
     var ls = st.local != null ? [st.local] : st.todas ? D.porMun[st.mun] || [] : [];
     var o = [];
     ls.forEach(function (i) { var l = D.l[i]; l[5].forEach(function (s) { o.push([l[0], l[1], s[0]]); }); });
@@ -268,7 +270,7 @@ tr.tot td{font-weight:800;border-top:2px solid var(--linha)}
   }
   var PEND = false;
   function pedirRender() { if (PEND) return; PEND = true; RELOGIO.depois(300, function () { PEND = false; render(); }); }
-  function ciclo() { RELOGIO.depois(PERIODO, function () { (st.mun ? lerCs() : Promise.resolve()).then(ciclo, ciclo); }); }
+  function ciclo() { RELOGIO.depois(PERIODO, function () { (st.uf ? lerCs() : Promise.resolve()).then(ciclo, ciclo); }); }
 
   // ======================================================================
   // Desenho
@@ -326,9 +328,75 @@ tr.tot td{font-weight:800;border-top:2px solid var(--linha)}
     $('mig').innerHTML = mg.join(' › ');
     var c = $('conteudo');
     if (!st.uf || !D) { if (st.uf) c.innerHTML = '<div class="cartao"><p>Abrindo os locais de votação de ' + esc(st.uf) + '…</p></div>'; return; }
-    if (!st.mun) { c.innerHTML = '<div class="cartao"><h2>' + esc(st.uf) + '</h2><p class="sub">' + fmtN(Object.keys(D.m).length) + ' municípios · ' + fmtN(D.l.length) + ' locais de votação. Escolha um município ou busque um local.</p></div>'; return; }
+    if (!st.mun) return renderEstado(c);
     if (st.local != null) return renderLocal(c);
     renderMun(c);
+  }
+  // ---- estado inteiro: locais ou seções classificados pela apuração, sem escolher município
+  var LIMITE_ESTADO = 3000;   // ler o estado todo só nos estados pequenos (2 consultas por seção)
+  function chave(hora) { var m = /(\d+)\/(\d+)\/(\d+) (\S+)/.exec(hora || ''); return m ? m[3] + m[2] + m[1] + m[4] : ''; }
+  function linhasEstado() {
+    if (st.vis === 'secoes') {
+      var o = [];
+      D.l.forEach(function (l, i) {
+        l[5].forEach(function (s) { var k = ch(l[0], l[1], s[0]); if (CS.chegou[k]) o.push({ k: k, li: i, x: { mun: l[0], zona: l[1], s: s }, ult: chave(CS.chegou[k]) }); });
+      });
+      o.sort(st.ord === 'nome' ? function (a, b) { return D.l[a.li][3].localeCompare(D.l[b.li][3], 'pt-BR') || (a.x.s[0] < b.x.s[0] ? -1 : 1); }
+        : st.ord === 'apur' ? function (a, b) { return (RES[b.k] ? 1 : 0) - (RES[a.k] ? 1 : 0) || (b.ult > a.ult ? 1 : -1); }
+          : function (a, b) { return b.ult > a.ult ? 1 : b.ult < a.ult ? -1 : 0; });
+      return o;
+    }
+    var r = [];
+    D.l.forEach(function (l, i) {
+      var n = 0, ult = '';
+      l[5].forEach(function (s) { var h = CS.chegou[ch(l[0], l[1], s[0])]; if (h) { n++; var c = chave(h); if (c > ult) ult = c; } });
+      if (n || st.ord === 'nome') r.push({ li: i, n: n, tot: l[5].length, p: n / l[5].length, ult: ult });
+    });
+    r.sort(st.ord === 'nome' ? function (a, b) { return D.l[a.li][3].localeCompare(D.l[b.li][3], 'pt-BR'); }
+      : st.ord === 'recente' ? function (a, b) { return b.ult > a.ult ? 1 : b.ult < a.ult ? -1 : 0; }
+        : function (a, b) { return b.p - a.p || b.n - a.n || (b.ult > a.ult ? 1 : -1); });
+    return r;
+  }
+  // seções a ler a partir da lista do estado (só as que chegaram e ainda não foram lidas)
+  function aLerEstado(rows) {
+    var o = [];
+    rows.forEach(function (r) {
+      if (r.k) { if (!RES[r.k] && !LENDO[r.k]) o.push(r.x); return; }
+      var l = D.l[r.li]; l[5].forEach(function (s) { var k = ch(l[0], l[1], s[0]); if (CS.chegou[k] && !RES[k] && !LENDO[k]) o.push({ mun: l[0], zona: l[1], s: s }); });
+    });
+    return o;
+  }
+  function renderEstado(c) {
+    var linhas = linhasEstado(), mostrar = linhas.slice(0, st.lim), lidas = Object.keys(RES).length;
+    var h = ['<div class="cartao"><h2>' + esc(st.uf) + '</h2><p class="sub">' + fmtN(Object.keys(D.m).length) + ' municípios · ' + fmtN(D.l.length) + ' locais · <b>' + fmtN(CS.n) + '</b> de ' + fmtN(CS.total) + ' seções já chegaram ao TSE (' + fmtP(CS.total ? 100 * CS.n / CS.total : 0) + ') · ' + fmtN(lidas) + ' lidas aqui</p>'];
+    h.push('<div class="ctl" style="grid-template-columns:auto auto 1fr;align-items:center;margin-bottom:0"><span class="sub">Ver:</span><span>' +
+      [['locais', 'Locais'], ['secoes', 'Seções']].map(function (o) { return '<button class="btn' + (st.vis === o[0] ? ' forte' : '') + '" data-vis="' + o[0] + '">' + o[1] + '</button>'; }).join(' ') + '</span><span>Ordenar: ' +
+      [['apur', st.vis === 'secoes' ? 'Lidas primeiro' : 'Mais apurados'], ['recente', 'Chegada mais recente'], ['nome', 'Nome']].map(function (o) { return '<button class="btn' + (st.ord === o[0] ? ' forte' : '') + '" data-ord="' + o[0] + '">' + o[1] + '</button>'; }).join(' ') + '</span></div>');
+    var pend = aLerEstado(mostrar), todo = aLerEstado(linhas);
+    if (pend.length) h.push('<p><button class="btn forte" data-acao="ler-lista">Ler as ' + fmtN(pend.length) + ' seções desta lista</button> <span class="nota">' + fmtN(2 * pend.length) + ' consultas ao TSE, cerca de ' + Math.max(1, Math.ceil(2 * pend.length / POR_SEG / 60)) + ' min</span></p>');
+    if (todo.length > pend.length) h.push(CS.total <= LIMITE_ESTADO ? '<p><button class="btn" data-acao="ler-estado">Ler todas as ' + fmtN(todo.length) + ' seções que chegaram no estado</button> <span class="nota">' + fmtN(2 * todo.length) + ' consultas, cerca de ' + Math.max(1, Math.ceil(2 * todo.length / POR_SEG / 60)) + ' min</span></p>'
+      : '<p class="nota">Estado grande: para não sobrecarregar o TSE, a leitura é feita pela lista acima (até ' + st.lim + ' linhas por vez) ou por município.</p>');
+    h.push('</div><div class="cartao"><div class="tab-x"><table><thead><tr>');
+    if (st.vis === 'secoes') {
+      h.push('<th>Seção</th><th>Local · município</th><th>Chegou</th><th>Situação</th><th>Lula 1º</th><th>Lula 2º</th><th>Flávio 1º</th><th>Flávio 2º</th></tr></thead><tbody>');
+      mostrar.forEach(function (r) {
+        var l = D.l[r.li], s = r.x.s, v = RES[r.k];
+        h.push('<tr><td><b>' + (+s[0]) + '</b><br><small class="t1">zona ' + (+l[1]) + '</small></td><td><button data-local="' + r.li + '">' + esc(l[3]) + '</button><br><small class="t1">' + esc(D.m[l[0]]) + '</small></td><td>' + esc((CS.chegou[r.k] || '').split(' ')[1] || '') + '</td><td>' + situacao(r.k) + '</td>' +
+          '<td class="t1">' + fmtP(pv(s[3], s[3], s[4])) + '</td><td class="c-lula">' + (v ? fmtP(pv(v.lula, v.lula, v.flavio)) : '—') + '</td><td class="t1">' + fmtP(pv(s[4], s[3], s[4])) + '</td><td class="c-flavio">' + (v ? fmtP(pv(v.flavio, v.lula, v.flavio)) : '—') + '</td></tr>');
+      });
+    } else {
+      h.push('<th>Local · município</th><th>Apuradas</th><th>Última chegada</th><th>Lidas</th><th>Lula 1º</th><th>Lula 2º</th><th>Flávio 1º</th><th>Flávio 2º</th></tr></thead><tbody>');
+      mostrar.forEach(function (r) {
+        var l = D.l[r.li], t = somar(secoesDe([r.li])), l1 = t.n ? t.l1 : t.L1, f1 = t.n ? t.f1 : t.F1;
+        h.push('<tr><td><button data-local="' + r.li + '">' + esc(l[3]) + '</button><br><small class="t1">' + esc(D.m[l[0]]) + ' · zona ' + (+l[1]) + '</small></td><td><b>' + r.n + '</b> de ' + r.tot + ' (' + fmtP(100 * r.p) + ')</td><td>' + (r.ult ? r.ult.slice(8) : '—') + '</td><td>' + t.n + '</td>' +
+          '<td class="t1">' + fmtP(pv(l1, l1, f1)) + '</td><td class="c-lula">' + (t.n ? fmtP(pv(t.lula, t.lula, t.flavio)) : '—') + '</td><td class="t1">' + fmtP(pv(f1, l1, f1)) + '</td><td class="c-flavio">' + (t.n ? fmtP(pv(t.flavio, t.lula, t.flavio)) : '—') + '</td></tr>');
+      });
+    }
+    h.push('</tbody></table></div>');
+    if (!linhas.length) h.push('<p class="sub">Nenhuma seção deste estado chegou ao TSE ainda (a lista do TSE é atualizada em lotes; o painel confere a cada ' + PERIODO / 1000 + ' s).</p>');
+    if (linhas.length > mostrar.length) h.push('<p class="nota">Mostrando ' + fmtN(mostrar.length) + ' de ' + fmtN(linhas.length) + '. <button class="btn" data-acao="mais">Mostrar mais 300</button></p>');
+    h.push('<p class="nota">' + (st.vis === 'secoes' ? 'Só as seções que já chegaram ao TSE.' : 'Locais com pelo menos uma seção apurada (em "Nome", todos).') + ' "1º" = 1º turno (Dados Abertos) nas mesmas seções lidas; sem leitura, o 1º turno do local inteiro. "2º" = só as seções lidas.</p></div>');
+    c.innerHTML = h.join('');
   }
   function renderMun(c) {
     var idx = D.porMun[st.mun] || [], secs = secoesDe(idx), t = somar(secs);
@@ -375,13 +443,19 @@ tr.tot td{font-weight:800;border-top:2px solid var(--linha)}
   function irLocal(i) { st.local = i; st.mun = D.l[i][0]; $('res').hidden = true; render(); lerAbertas(); }
 
   document.addEventListener('click', function (ev) {
-    var b = ev.target.closest('[data-ir],[data-mun],[data-local],[data-acao]');
+    var b = ev.target.closest('[data-ir],[data-mun],[data-local],[data-acao],[data-vis],[data-ord]');
     if (!b) return;
     var v;
     if ((v = b.getAttribute('data-local')) != null) { irLocal(+v); return; }
     if ((v = b.getAttribute('data-mun')) != null) { irMun(v); return; }
     if ((v = b.getAttribute('data-ir')) != null) { if (v === 'uf') { st.mun = ''; st.local = null; st.todas = false; } else { st.local = null; } render(); return; }
-    if ((v = b.getAttribute('data-acao')) === 'todas') { st.todas = true; lerAbertas(); render(); }
+    if ((v = b.getAttribute('data-vis')) != null) { st.vis = v; st.lim = 300; render(); return; }
+    if ((v = b.getAttribute('data-ord')) != null) { st.ord = v; st.lim = 300; render(); return; }
+    v = b.getAttribute('data-acao');
+    if (v === 'todas') { st.todas = true; lerAbertas(); render(); }
+    else if (v === 'mais') { st.lim += 300; render(); }
+    else if (v === 'ler-lista') { aLerEstado(linhasEstado().slice(0, st.lim)).forEach(function (x) { lerSecao(x.mun, x.zona, x.s[0]); }); render(); }
+    else if (v === 'ler-estado' && CS.total <= LIMITE_ESTADO) { st.todoUf = true; lerAbertas(); render(); }
   });
   document.addEventListener('change', function (ev) {
     var t = ev.target;
