@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="referrer" content="no-referrer">
+<title>Seções · 2º turno 2026</title>
+<style>
+:root{--bg:#f4f1ea;--card:#fffdf8;--txt:#2a3441;--sub:#5b6573;--linha:#e2dccf;--linha2:#efe9de;--destaque:#3b6f8f;--lula:#c81414;--flavio:#2f5d8a;--ok:#2e7d6b;--ruim:#b0412e}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--txt);font-family:'Public Sans',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:16px;line-height:1.45}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+.cab{background:var(--destaque);color:#fff;padding:12px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px}
+.cab h1{margin:0;font-size:1.15rem}
+.cab .st{font-size:.8rem;background:rgba(0,0,0,.18);border-radius:999px;padding:4px 10px}
+main{max-width:1200px;margin:0 auto;padding:12px 16px 40px}
+.ctl{display:grid;grid-template-columns:minmax(0,170px) minmax(0,1fr) minmax(0,260px);gap:8px;margin:10px 0}
+.ctl select,.ctl input{min-height:46px;border-radius:12px;border:1px solid var(--linha);background:var(--card);padding:0 12px;font-size:16px;width:100%}
+.res{background:var(--card);border:1px solid var(--linha);border-radius:12px;max-height:340px;overflow:auto;margin-bottom:10px}
+.res button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--linha2);background:none;padding:10px 12px;min-height:44px}
+.res button:hover{background:var(--linha2)}
+.res small{color:var(--sub)}
+.mig{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;margin:6px 0 10px;font-size:.9rem}
+.mig button{border:0;background:none;color:var(--destaque);text-decoration:underline;font-weight:600;min-height:40px;padding:0 2px}
+.cartao{background:var(--card);border:1px solid var(--linha);border-radius:16px;padding:16px;margin-bottom:12px}
+h2{margin:0 0 4px;font-size:1.3rem}
+h3{margin:14px 0 8px;font-size:1rem}
+.sub{color:var(--sub);font-size:.85rem;margin:0}
+.btn{min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--linha);background:var(--card);font-weight:600}
+.btn.forte{background:var(--destaque);border-color:var(--destaque);color:#fff}
+.aviso{border:1px solid var(--ruim);border-radius:12px;padding:10px 12px;background:var(--card);margin:8px 0;font-size:.9rem}
+.placar{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:10px;margin-top:10px}
+.turno{border-radius:12px;background:var(--bg);padding:12px}
+.turno h4{margin:0 0 6px;font-size:.85rem;color:var(--sub);text-transform:uppercase;letter-spacing:.04em}
+.lin{display:flex;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums;padding:2px 0}
+.lin b{font-size:1.15rem}
+.c-lula{color:var(--lula)}.c-flavio{color:var(--flavio)}
+.tab-x{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th{font-size:.72rem;color:var(--sub);font-weight:600;text-align:right;border-bottom:1px solid var(--linha);padding:6px 5px;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+td{border-bottom:1px solid var(--linha2);padding:7px 5px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td button{border:0;background:none;color:var(--txt);font-weight:600;text-decoration:underline;padding:6px 0;min-height:36px;text-align:left;white-space:normal}
+tr.tot td{font-weight:800;border-top:2px solid var(--linha)}
+.t1{color:var(--sub)}
+.sit{font-size:.75rem;border-radius:999px;padding:2px 8px;background:var(--linha2)}
+.sit.ok{background:#d9efe8;color:var(--ok)}
+.sit.vem{background:#fff1cc}
+.nota{font-size:.78rem;color:var(--sub);margin:8px 0 0}
+@media (max-width:700px){.ctl{grid-template-columns:minmax(0,1fr)}.cab h1{font-size:1rem}}
+</style>
+</head>
+<body>
+<header class="cab"><h1>Seções ao vivo · 2º turno 2026</h1><span class="st" id="st">Escolha um estado</span></header>
+<main>
+  <div class="ctl">
+    <select id="uf" aria-label="Estado"><option value="">Estado…</option></select>
+    <input id="busca" type="search" placeholder="Buscar município ou local de votação" aria-label="Buscar município ou local de votação" disabled>
+    <select id="mun" aria-label="Município" disabled><option value="">Município…</option></select>
+  </div>
+  <div id="res" class="res" hidden></div>
+  <div id="aviso" class="aviso" hidden></div>
+  <nav id="mig" class="mig"></nav>
+  <div id="conteudo"><div class="cartao"><p>Escolha um estado e depois um município ou um local de votação. O 1º turno de cada seção vem dos Dados Abertos do TSE; o 2º turno, do boletim de urna publicado pelo TSE assim que a seção é recebida.</p></div></div>
+</main>
+<script id="app">
+(function () {
+  'use strict';
+  var OPC = window.SECOES_OPCOES || {};
+  var Q = new URLSearchParams(OPC.busca != null ? OPC.busca : location.search);
+  // ?ensaio=1: lê os boletins do 1º turno (pleito 3220, eleição 6257), para conferir com o 1º turno da base
+  var ENSAIO = Q.get('ensaio') === '1';
+  var P = ENSAIO ? '3220' : '3221', ELE = ENSAIO ? 6257 : 6258;
+  var RAIZ = 'https://resultados.tse.jus.br/oficial/ele2026/arquivo-urna/' + P;
+  var PASTA = OPC.pasta || 'dados/';
+  var LULA = 13, FLAVIO = 22;
+  var UFS = ['AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MG', 'MS', 'MT', 'PA', 'PB', 'PE', 'PI', 'PR', 'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO'];
+  var POR_SEG = 9, SIMULT = 3, MAX_404 = 5, PAUSA_404 = 5 * 60000, PERIODO = 90000;
+  var RELOGIO = OPC.relogio || { agora: function () { return Date.now(); }, depois: function (ms, f) { return setTimeout(f, ms); } };
+  var NF = new Intl.NumberFormat('pt-BR'), NP = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function pad(s, k) { s = String(s); while (s.length < k) s = '0' + s; return s; }
+  function norm(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+  function fmtN(n) { return n == null ? '—' : NF.format(n); }
+  function fmtP(x) { return x == null || isNaN(x) ? '—' : NP.format(x) + '%'; }
+
+  // ---- endereços do TSE (confirmados no ele-c.json "arq" e nos arquivos do 1º turno, 25/10/2026)
+  var URL = {
+    cs: function (uf) { uf = uf.toLowerCase(); return RAIZ + '/config/' + uf + '/' + uf + '-p' + pad(P, 6) + '-cs.json'; },
+    pasta: function (uf, mun, zona, sec) { return RAIZ + '/dados/' + uf.toLowerCase() + '/' + mun + '/' + zona + '/' + sec; },
+    aux: function (uf, mun, zona, sec) { return URL.pasta(uf, mun, zona, sec) + '/p' + pad(P, 6) + '-' + uf.toLowerCase() + '-m' + mun + '-z' + zona + '-s' + sec + '-aux.json'; },
+    bu: function (uf, mun, zona, sec, hash, nm) { return URL.pasta(uf, mun, zona, sec) + '/' + hash + '/' + nm; }
+  };
+
+  // ---- fila: até 9 consultas por segundo, 3 ao mesmo tempo, pausa depois de 5 "não encontrado" seguidos
+  var FILA = { q: [], ativos: 0, inicios: [], seguidos: 0, pausaAte: 0, agendado: false, total: 0 };
+  function pedir(url, tipo) { return new Promise(function (res) { FILA.q.push({ url: url, tipo: tipo, res: res }); girar(); }); }
+  function girar() {
+    while (FILA.ativos < SIMULT && FILA.q.length) {
+      var agora = RELOGIO.agora();
+      if (agora < FILA.pausaAte) return mais(FILA.pausaAte - agora);
+      while (FILA.inicios.length && agora - FILA.inicios[0] >= 1000) FILA.inicios.shift();
+      if (FILA.inicios.length >= POR_SEG) return mais(1000 - (agora - FILA.inicios[0]) + 1);
+      var it = FILA.q.shift(); FILA.inicios.push(agora); FILA.ativos++; FILA.total++;
+      (function (it) {
+        Promise.resolve().then(function () { return buscar(it.url, it.tipo); }).then(null, function () { return { ok: false, status: 0 }; }).then(function (r) {
+          FILA.ativos--;
+          if (r.ok) FILA.seguidos = 0;
+          else if (r.status === 404 || r.status === 403) {
+            if (++FILA.seguidos >= MAX_404) { FILA.pausaAte = RELOGIO.agora() + PAUSA_404; FILA.seguidos = 0; avisar('O TSE respondeu "não encontrado" várias vezes seguidas: pausa de 5 minutos para não ser bloqueado.'); }
+          }
+          it.res(r); girar();
+        });
+      })(it);
+    }
+  }
+  function mais(ms) { if (FILA.agendado) return; FILA.agendado = true; RELOGIO.depois(Math.max(1, ms), function () { FILA.agendado = false; girar(); }); }
+  function buscar(url, tipo) {
+    if (OPC.buscarTse) return OPC.buscarTse(url, tipo);
+    return fetch(url, { cache: 'no-cache' }).then(function (r) {
+      if (!r.ok) return { ok: false, status: r.status };
+      return (tipo === 'bin' ? r.arrayBuffer() : r.json()).then(function (d) { return { ok: true, status: r.status, dado: d }; }, function () { return { ok: false, status: -1 }; });
+    });
+  }
+  function carregar(url) {
+    if (OPC.carregar) return OPC.carregar(url);
+    return fetch(url, { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  }
+
+  // ======================================================================
+  // Boletim de urna (bu.dat): DER/ASN.1. Envelope → conteúdo (OCTET STRING) → boletim:
+  //   identificação da seção {{município, zona}, local, seção}
+  //   resultados por eleição {idEleição, aptos, …, resultados {tipoCargo, comparecimento, totais por cargo {cargo, ordem, votáveis}}}
+  //   votável {[1] tipo (1 nominal, 2 branco, 3 nulo), [2] quantidade, [3] {partido, número}, ordem, hash}
+  // Conferido com o 1º turno: AC, Porto Walter, zona 4, seção 77 = Dados Abertos (13: 99, 22: 103, brancos 4, nulos 13, total 234).
+  // ======================================================================
+  function derNo(b, i) {
+    var t0 = b[i], j = i + 1, tag = t0 & 31;
+    if (tag === 31) { tag = 0; while (b[j] & 128) tag = tag * 128 + (b[j++] & 127); tag = tag * 128 + b[j++]; }
+    var len = b[j++];
+    if (len & 128) { var n = len & 127; len = 0; for (var k = 0; k < n; k++) len = len * 256 + b[j++]; }
+    if (j + len > b.length) throw new Error('boletim cortado');
+    return { cls: t0 >> 6, cons: !!(t0 & 32), tag: tag, ini: j, fim: j + len };
+  }
+  function derFilhos(b, no) { var o = [], i = no.ini; while (i < no.fim) { var e = derNo(b, i); o.push(e); i = e.fim; } return o; }
+  function derInt(b, no) { var n = 0; for (var i = no.ini; i < no.fim; i++) n = n * 256 + b[i]; return n; }
+  function eSeq(no) { return no.cls === 0 && no.cons && no.tag === 16; }
+  function eInt(no) { return no.cls === 0 && !no.cons && (no.tag === 2 || no.tag === 10); }
+  function lerBU(buf, idEleicao) {
+    var b = new Uint8Array(buf), env = derNo(b, 0), fs = derFilhos(b, env);
+    var oct = fs.filter(function (e) { return e.cls === 0 && e.tag === 4; }).pop();
+    if (!oct) throw new Error('boletim sem conteúdo');
+    var bu = derNo(b, oct.ini), cs = derFilhos(b, bu), r = { local: null, secao: null, mun: null, zona: null };
+    cs.forEach(function (c) {
+      if (!eSeq(c)) return;
+      var f = derFilhos(b, c);
+      // identificação da seção: {{município, zona}, local, seção}
+      if (r.local == null && f.length === 3 && eSeq(f[0]) && eInt(f[1]) && eInt(f[2])) {
+        var mz = derFilhos(b, f[0]);
+        if (mz.length === 2 && eInt(mz[0]) && eInt(mz[1])) { r.mun = derInt(b, mz[0]); r.zona = derInt(b, mz[1]); r.local = derInt(b, f[1]); r.secao = derInt(b, f[2]); }
+      }
+      // resultados por eleição: a da eleição pedida (o boletim do 2º turno pode trazer também a de governador)
+      f.forEach(function (e) {
+        if (!eSeq(e)) return;
+        var g = derFilhos(b, e);
+        if (g.length < 3 || !eInt(g[0]) || derInt(b, g[0]) !== idEleicao) return;
+        r.aptos = derInt(b, g[1]);
+        var rv = g.filter(eSeq)[0]; if (!rv) return;
+        derFilhos(b, rv).forEach(function (res) {
+          var h = derFilhos(b, res), comp = h.filter(eInt)[1], tot = h.filter(eSeq)[0];
+          if (!tot) return;
+          derFilhos(b, tot).forEach(function (cg) {
+            var k = derFilhos(b, cg), cod = k.filter(function (x) { return x.cls === 2 && x.tag === 1; })[0], vs = k.filter(eSeq)[0];
+            if (!cod || derInt(b, cod) !== 1 || !vs) return;   // cargo 1 = Presidente
+            r.comp = comp ? derInt(b, comp) : null; r.lula = 0; r.flavio = 0; r.brancos = 0; r.nulos = 0; r.outros = 0;
+            derFilhos(b, vs).forEach(function (v) {
+              var x = derFilhos(b, v), tipo = 0, qtd = 0, num = null;
+              x.forEach(function (y) {
+                if (y.cls !== 2) return;
+                if (y.tag === 1) tipo = derInt(b, y);
+                else if (y.tag === 2) qtd = derInt(b, y);
+                else if (y.tag === 3 && y.cons) { var z = derFilhos(b, y).filter(eInt); if (z.length) num = derInt(b, z[z.length - 1]); }
+              });
+              if (tipo === 1 && num === LULA) r.lula += qtd;
+              else if (tipo === 1 && num === FLAVIO) r.flavio += qtd;
+              else if (tipo === 2) r.brancos += qtd;
+              else if (tipo === 3) r.nulos += qtd;
+              else r.outros += qtd;
+            });
+          });
+        });
+      });
+    });
+    if (r.lula == null) throw new Error('boletim sem o resultado de Presidente da eleição ' + idEleicao);
+    return r;
+  }
+
+  // ======================================================================
+  // Estado
+  // ======================================================================
+  var st = { uf: '', mun: '', local: null, todas: false };
+  var D = null;          // base do estado: {uf, m, l: [[mun, zona, local, nome, endereço, [[seção, aptos, comp, Lula, Flávio, brancos, nulos]]]]}
+  var CS = { uf: '', hora: '', chegou: {}, total: 0, n: 0 };   // seções do 2º turno já recebidas pelo TSE: 'mun|zona|seção' → hora
+  var RES = {};          // 'mun|zona|seção' → resultado do 2º turno lido do boletim
+  var LENDO = {};        // 'mun|zona|seção' → já pedido
+  var ERROS = {};
+  var AVISO = '';
+  function avisar(m) { AVISO = m; render(); }
+  function ch(mun, zona, sec) { return mun + '|' + zona + '|' + sec; }
+
+  function abrirUf(uf) {
+    st.uf = uf; st.mun = ''; st.local = null; st.todas = false; D = null; RES = {}; LENDO = {}; ERROS = {}; CS = { uf: '', hora: '', chegou: {}, total: 0, n: 0 };
+    render();
+    if (!uf) return Promise.resolve();
+    return carregar(PASTA + uf.toLowerCase() + '.json').then(function (d) {
+      if (st.uf !== uf) return;
+      D = d; D.porMun = {};
+      D.l.forEach(function (l, i) { (D.porMun[l[0]] = D.porMun[l[0]] || []).push(i); });
+      render();
+      return lerCs();
+    }, function (e) { avisar('Não consegui abrir a lista de locais de ' + uf + ': ' + e.message); });
+  }
+  // lista de seções do estado no TSE: as que já chegaram têm data e hora
+  function lerCs() {
+    var uf = st.uf; if (!uf) return Promise.resolve();
+    return pedir(URL.cs(uf), 'json').then(function (r) {
+      if (st.uf !== uf) return;
+      if (!r.ok) { CS.hora = ''; render(); return; }
+      var j = r.dado, c = {}, tot = 0, n = 0;
+      ((j.abr || [])[0] || { mu: [] }).mu.forEach(function (m) {
+        (m.zon || []).forEach(function (z) { (z.sec || []).forEach(function (s) { tot++; if (s.ha) { n++; c[ch(m.cd, z.cd, s.ns)] = s.da + ' ' + s.ha; } }); });
+      });
+      CS = { uf: uf, hora: (j.dg || '') + ' ' + (j.hg || ''), chegou: c, total: tot, n: n };
+      lerAbertas();
+      render();
+    });
+  }
+  // seções a ler agora: as do local aberto (ou do município todo, se pedido) que já chegaram e ainda não foram lidas
+  function seccoesAbertas() {
+    if (!D || !st.mun) return [];
+    var ls = st.local != null ? [st.local] : st.todas ? D.porMun[st.mun] || [] : [];
+    var o = [];
+    ls.forEach(function (i) { var l = D.l[i]; l[5].forEach(function (s) { o.push([l[0], l[1], s[0]]); }); });
+    return o;
+  }
+  function lerAbertas() {
+    seccoesAbertas().forEach(function (x) { var k = ch(x[0], x[1], x[2]); if (CS.chegou[k] && !RES[k] && !LENDO[k]) lerSecao(x[0], x[1], x[2]); });
+  }
+  function lerSecao(mun, zona, sec) {
+    var uf = st.uf, k = ch(mun, zona, sec);
+    LENDO[k] = true;
+    return pedir(URL.aux(uf, mun, zona, sec), 'json').then(function (r) {
+      if (!r.ok) throw new Error('lista de arquivos indisponível (' + r.status + ')');
+      var hs = r.dado.hashes || [], h = hs.filter(function (x) { return /totaliz/i.test(x.st || ''); }).pop() || hs[hs.length - 1];
+      var a = h && (h.arq || []).filter(function (x) { return x.tp === 'bu'; })[0];
+      if (!a) throw new Error('sem boletim de urna');
+      return pedir(URL.bu(uf, mun, zona, sec, h.hash, a.nm), 'bin');
+    }).then(function (r) {
+      if (!r.ok) throw new Error('boletim indisponível (' + r.status + ')');
+      if (st.uf !== uf) return;
+      RES[k] = lerBU(r.dado, ELE); delete ERROS[k];
+      pedirRender();
+    }).then(null, function (e) { ERROS[k] = e.message; delete LENDO[k]; pedirRender(); });
+  }
+  var PEND = false;
+  function pedirRender() { if (PEND) return; PEND = true; RELOGIO.depois(300, function () { PEND = false; render(); }); }
+  function ciclo() { RELOGIO.depois(PERIODO, function () { (st.mun ? lerCs() : Promise.resolve()).then(ciclo, ciclo); }); }
+
+  // ======================================================================
+  // Desenho
+  // ======================================================================
+  function somar(lista) {
+    var t = { n: 0, aptos: 0, comp: 0, lula: 0, flavio: 0, brancos: 0, nulos: 0, n1: 0, a1: 0, c1: 0, l1: 0, f1: 0, b1: 0, u1: 0, L1: 0, F1: 0 };
+    lista.forEach(function (x) {
+      var s = x.s, r = RES[ch(x.mun, x.zona, s[0])];
+      t.a1 += s[1]; t.c1 += s[2]; t.L1 += s[3]; t.F1 += s[4];   // 1º turno de todas as seções
+      if (!r) return;
+      t.n++; t.aptos += r.aptos || 0; t.comp += r.comp || 0; t.lula += r.lula; t.flavio += r.flavio; t.brancos += r.brancos; t.nulos += r.nulos;
+      t.n1++; t.l1 += s[3]; t.f1 += s[4]; t.b1 += s[5]; t.u1 += s[6]; t.c1j = (t.c1j || 0) + s[2]; t.a1j = (t.a1j || 0) + s[1];
+    });
+    return t;
+  }
+  function pv(x, a, b) { return a + b > 0 ? 100 * x / (a + b) : null; }
+  function htmlPlacar(t, titulo) {
+    var h = '<div class="placar">';
+    h += '<div class="turno"><h4>1º turno · nas ' + fmtN(t.n) + ' seções já lidas</h4>' +
+      '<div class="lin"><span class="c-lula">Lula</span><b class="c-lula">' + fmtP(pv(t.l1, t.l1, t.f1)) + '</b><span>' + fmtN(t.l1) + '</span></div>' +
+      '<div class="lin"><span class="c-flavio">Flávio Bolsonaro</span><b class="c-flavio">' + fmtP(pv(t.f1, t.l1, t.f1)) + '</b><span>' + fmtN(t.f1) + '</span></div>' +
+      '<div class="lin sub"><span>Brancos · Nulos</span><span>' + fmtN(t.b1) + ' · ' + fmtN(t.u1) + '</span></div>' +
+      '<div class="lin sub"><span>Comparecimento</span><span>' + fmtN(t.c1j || 0) + ' de ' + fmtN(t.a1j || 0) + '</span></div></div>';
+    h += '<div class="turno"><h4>2º turno · ' + fmtN(t.n) + ' seções lidas</h4>' +
+      '<div class="lin"><span class="c-lula">Lula</span><b class="c-lula">' + fmtP(pv(t.lula, t.lula, t.flavio)) + '</b><span>' + fmtN(t.lula) + '</span></div>' +
+      '<div class="lin"><span class="c-flavio">Flávio Bolsonaro</span><b class="c-flavio">' + fmtP(pv(t.flavio, t.lula, t.flavio)) + '</b><span>' + fmtN(t.flavio) + '</span></div>' +
+      '<div class="lin sub"><span>Brancos · Nulos</span><span>' + fmtN(t.brancos) + ' · ' + fmtN(t.nulos) + '</span></div>' +
+      '<div class="lin sub"><span>Comparecimento</span><span>' + fmtN(t.comp) + ' de ' + fmtN(t.aptos) + '</span></div></div>';
+    h += '</div><p class="nota">Percentuais sobre os votos em Lula + Flávio (no 1º turno, só entre os dois). O 1º turno é somado nas mesmas seções já lidas do 2º turno, para comparar o mesmo eleitorado' + (titulo ? '; ' + titulo : '') + '.</p>';
+    return h;
+  }
+  function secoesDe(idx) { var o = []; idx.forEach(function (i) { var l = D.l[i]; l[5].forEach(function (s) { o.push({ mun: l[0], zona: l[1], s: s, li: i }); }); }); return o; }
+  function situacao(k) {
+    if (RES[k]) return '<span class="sit ok">lida</span>';
+    if (ERROS[k]) return '<span class="sit" title="' + esc(ERROS[k]) + '">erro</span>';
+    if (LENDO[k]) return '<span class="sit vem">lendo…</span>';
+    if (CS.chegou[k]) return '<span class="sit vem">chegou ' + esc(CS.chegou[k].split(' ')[1] || '') + '</span>';
+    return '<span class="sit">aguardando</span>';
+  }
+  function render() {
+    var a = $('aviso'); a.hidden = !AVISO; a.textContent = AVISO;
+    $('st').textContent = !st.uf ? 'Escolha um estado' : !CS.hora.trim() ? 'Consultando o TSE…' : 'TSE ' + CS.hora.trim().split(' ')[1] + ' · ' + fmtN(CS.n) + ' de ' + fmtN(CS.total) + ' seções de ' + st.uf + ' recebidas' + (ENSAIO ? ' (ensaio: 1º turno)' : '');
+    var busca = $('busca'), mun = $('mun');
+    busca.disabled = !D; mun.disabled = !D;
+    if (D && mun.getAttribute('data-uf') !== st.uf && document.activeElement !== mun) {
+      mun.innerHTML = '<option value="">Município…</option>' + Object.keys(D.m).sort(function (x, y) { return D.m[x].localeCompare(D.m[y], 'pt-BR'); }).map(function (c) { return '<option value="' + c + '">' + esc(D.m[c]) + '</option>'; }).join('');
+      mun.setAttribute('data-uf', st.uf);
+    }
+    if (D && document.activeElement !== mun) mun.value = st.mun;
+    // migalhas
+    var mg = [];
+    if (st.uf) mg.push(st.mun ? '<button data-ir="uf">' + esc(st.uf) + '</button>' : '<b>' + esc(st.uf) + '</b>');
+    if (st.mun) mg.push(st.local != null ? '<button data-ir="mun">' + esc(D.m[st.mun]) + '</button>' : '<b>' + esc(D.m[st.mun]) + '</b>');
+    if (st.local != null) mg.push('<b>' + esc(D.l[st.local][3]) + '</b>');
+    $('mig').innerHTML = mg.join(' › ');
+    var c = $('conteudo');
+    if (!st.uf || !D) { if (st.uf) c.innerHTML = '<div class="cartao"><p>Abrindo os locais de votação de ' + esc(st.uf) + '…</p></div>'; return; }
+    if (!st.mun) { c.innerHTML = '<div class="cartao"><h2>' + esc(st.uf) + '</h2><p class="sub">' + fmtN(Object.keys(D.m).length) + ' municípios · ' + fmtN(D.l.length) + ' locais de votação. Escolha um município ou busque um local.</p></div>'; return; }
+    if (st.local != null) return renderLocal(c);
+    renderMun(c);
+  }
+  function renderMun(c) {
+    var idx = D.porMun[st.mun] || [], secs = secoesDe(idx), t = somar(secs);
+    var chegou = secs.filter(function (x) { return CS.chegou[ch(x.mun, x.zona, x.s[0])]; }).length;
+    var faltam = secs.filter(function (x) { var k = ch(x.mun, x.zona, x.s[0]); return CS.chegou[k] && !RES[k]; }).length;
+    var h = ['<div class="cartao"><h2>' + esc(D.m[st.mun]) + ' (' + esc(st.uf) + ')</h2><p class="sub">' + fmtN(idx.length) + ' locais · ' + fmtN(secs.length) + ' seções · <b>' + fmtN(chegou) + '</b> já chegaram ao TSE · ' + fmtN(t.n) + ' lidas aqui</p>'];
+    if (!st.todas && faltam) h.push('<p><button class="btn forte" data-acao="todas">Ler as ' + fmtN(faltam) + ' seções que já chegaram</button></p><p class="nota">São ' + fmtN(2 * faltam) + ' consultas ao TSE (cerca de ' + Math.max(1, Math.ceil(2 * faltam / POR_SEG / 60)) + ' min). Depois disso, as novas seções do município são lidas sozinhas.</p>');
+    else if (st.todas) h.push('<p class="nota">Lendo o município todo: as seções novas entram sozinhas a cada ' + PERIODO / 1000 + ' s.</p>');
+    h.push(htmlPlacar(t) + '</div>');
+    h.push('<div class="cartao"><h3>Locais de votação</h3><div class="tab-x"><table><thead><tr><th>Local</th><th>Seções</th><th>Chegaram</th><th>Lidas</th><th>Lula 1º</th><th>Lula 2º</th><th>Flávio 1º</th><th>Flávio 2º</th></tr></thead><tbody>');
+    idx.slice().sort(function (x, y) { return D.l[x][3].localeCompare(D.l[y][3], 'pt-BR'); }).forEach(function (i) {
+      var l = D.l[i], ss = secoesDe([i]), tl = somar(ss), cg = ss.filter(function (x) { return CS.chegou[ch(x.mun, x.zona, x.s[0])]; }).length;
+      h.push('<tr><td><button data-local="' + i + '">' + esc(l[3]) + '</button><br><small class="t1">' + esc(l[4]) + ' · zona ' + (+l[1]) + '</small></td><td>' + ss.length + '</td><td>' + cg + '</td><td>' + tl.n + '</td>' +
+        '<td class="t1">' + fmtP(pv(tl.L1, tl.L1, tl.F1)) + '</td><td class="c-lula">' + (tl.n ? fmtP(pv(tl.lula, tl.lula, tl.flavio)) : '—') + '</td><td class="t1">' + fmtP(pv(tl.F1, tl.L1, tl.F1)) + '</td><td class="c-flavio">' + (tl.n ? fmtP(pv(tl.flavio, tl.lula, tl.flavio)) : '—') + '</td></tr>');
+    });
+    h.push('</tbody></table></div><p class="nota">"Lula 1º" e "Flávio 1º" = todas as seções do local no 1º turno; "2º" = só as seções já lidas.</p></div>');
+    c.innerHTML = h.join('');
+  }
+  function renderLocal(c) {
+    var l = D.l[st.local], ss = secoesDe([st.local]), t = somar(ss);
+    var h = ['<div class="cartao"><h2>' + esc(l[3]) + '</h2><p class="sub">' + esc(l[4]) + ' · ' + esc(D.m[l[0]]) + ' (' + esc(st.uf) + ') · zona ' + (+l[1]) + ' · local nº ' + l[2] + ' · ' + ss.length + ' seções</p>' + htmlPlacar(t) + '</div>'];
+    h.push('<div class="cartao"><h3>Seção a seção</h3><div class="tab-x"><table><thead><tr><th>Seção</th><th>Situação</th><th>Lula 1º</th><th>Lula 2º</th><th>Flávio 1º</th><th>Flávio 2º</th><th>Brancos 1º</th><th>Brancos 2º</th><th>Nulos 1º</th><th>Nulos 2º</th><th>Compar. 1º</th><th>Compar. 2º</th><th>Aptos</th></tr></thead><tbody>');
+    ss.forEach(function (x) {
+      var s = x.s, k = ch(x.mun, x.zona, s[0]), r = RES[k];
+      h.push('<tr><td><b>' + (+s[0]) + '</b></td><td>' + situacao(k) + '</td><td class="t1">' + fmtN(s[3]) + '</td><td class="c-lula">' + (r ? fmtN(r.lula) : '—') + '</td><td class="t1">' + fmtN(s[4]) + '</td><td class="c-flavio">' + (r ? fmtN(r.flavio) : '—') + '</td>' +
+        '<td class="t1">' + fmtN(s[5]) + '</td><td>' + (r ? fmtN(r.brancos) : '—') + '</td><td class="t1">' + fmtN(s[6]) + '</td><td>' + (r ? fmtN(r.nulos) : '—') + '</td><td class="t1">' + fmtN(s[2]) + '</td><td>' + (r ? fmtN(r.comp) : '—') + '</td><td>' + fmtN(r ? r.aptos : s[1]) + '</td></tr>');
+    });
+    h.push('<tr class="tot"><td>Total</td><td>' + t.n + ' de ' + ss.length + '</td><td class="t1">' + fmtN(t.L1) + '</td><td class="c-lula">' + fmtN(t.lula) + '</td><td class="t1">' + fmtN(t.F1) + '</td><td class="c-flavio">' + fmtN(t.flavio) + '</td><td></td><td>' + fmtN(t.brancos) + '</td><td></td><td>' + fmtN(t.nulos) + '</td><td class="t1">' + fmtN(t.c1) + '</td><td>' + fmtN(t.comp) + '</td><td>' + fmtN(t.a1) + '</td></tr>');
+    h.push('</tbody></table></div><p class="nota">1º turno: Dados Abertos do TSE. 2º turno: boletim de urna de cada seção, lido assim que o TSE o recebe (a lista é conferida a cada ' + PERIODO / 1000 + ' s). Total do 1º turno = todas as seções do local.</p></div>');
+    c.innerHTML = h.join('');
+  }
+  // ---- busca: municípios e locais (nome ou endereço) do estado
+  function buscar_(txt) {
+    var r = $('res'), q = norm(txt).trim();
+    if (!D || q.length < 3) { r.hidden = true; r.innerHTML = ''; return; }
+    var ms = Object.keys(D.m).filter(function (c) { return norm(D.m[c]).indexOf(q) >= 0; }).slice(0, 10);
+    var ls = [];
+    for (var i = 0; i < D.l.length && ls.length < 40; i++) { var l = D.l[i]; if (norm(l[3]).indexOf(q) >= 0 || norm(l[4]).indexOf(q) >= 0) ls.push(i); }
+    r.innerHTML = ms.map(function (c) { return '<button data-mun="' + c + '">' + esc(D.m[c]) + ' <small>município</small></button>'; }).join('') +
+      ls.map(function (i) { var l = D.l[i]; return '<button data-local="' + i + '">' + esc(l[3]) + ' <small>' + esc(D.m[l[0]]) + ' · ' + esc(l[4]) + '</small></button>'; }).join('') || '<p class="sub" style="padding:10px">Nada encontrado.</p>';
+    r.hidden = false;
+  }
+  function irMun(c) { st.mun = c; st.local = null; st.todas = false; $('res').hidden = true; render(); lerAbertas(); }
+  function irLocal(i) { st.local = i; st.mun = D.l[i][0]; $('res').hidden = true; render(); lerAbertas(); }
+
+  document.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-ir],[data-mun],[data-local],[data-acao]');
+    if (!b) return;
+    var v;
+    if ((v = b.getAttribute('data-local')) != null) { irLocal(+v); return; }
+    if ((v = b.getAttribute('data-mun')) != null) { irMun(v); return; }
+    if ((v = b.getAttribute('data-ir')) != null) { if (v === 'uf') { st.mun = ''; st.local = null; st.todas = false; } else { st.local = null; } render(); return; }
+    if ((v = b.getAttribute('data-acao')) === 'todas') { st.todas = true; lerAbertas(); render(); }
+  });
+  document.addEventListener('change', function (ev) {
+    var t = ev.target;
+    if (t.id === 'uf') { $('busca').value = ''; buscar_(''); abrirUf(t.value); }
+    else if (t.id === 'mun' && t.value) irMun(t.value);
+  });
+  document.addEventListener('input', function (ev) { if (ev.target.id === 'busca') buscar_(ev.target.value); });
+
+  $('uf').innerHTML = '<option value="">Estado…</option>' + UFS.map(function (u) { return '<option value="' + u + '">' + u + '</option>'; }).join('');
+  if (!OPC.semCiclo) ciclo();
+  // endereço direto (bom para favoritos): ?uf=SP&mun=71072 (código do TSE) [&todas=1] ou ?uf=SP&local=71072-0001-1015 (município-zona-local)
+  var u0 = (Q.get('uf') || '').toUpperCase();
+  if (UFS.indexOf(u0) >= 0) {
+    $('uf').value = u0;
+    abrirUf(u0).then(function () {
+      if (!D) return;
+      var lo = (Q.get('local') || '').split('-'), m = Q.get('mun');
+      if (lo.length === 3) {
+        var i = D.l.findIndex(function (l) { return l[0] === pad(lo[0], 5) && l[1] === pad(lo[1], 4) && l[2] === +lo[2]; });
+        if (i >= 0) irLocal(i);
+      } else if (m && D.m[pad(m, 5)]) {
+        irMun(pad(m, 5));
+        if (Q.get('todas') === '1') { st.todas = true; lerAbertas(); render(); }
+      }
+    });
+  }
+  window.Secoes = { st: st, URL: URL, lerBU: lerBU, abrirUf: abrirUf, irMun: irMun, irLocal: irLocal, lerCs: lerCs, render: render, FILA: FILA, somar: somar, secoesDe: secoesDe,
+    get D() { return D; }, get CS() { return CS; }, get RES() { return RES; }, get ERROS() { return ERROS; } };
+})();
+</script>
+</body>
+</html>
